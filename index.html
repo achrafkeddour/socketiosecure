@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Chat App</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+</head>
+<body style="color: rgb(44, 44, 44); font-family: Arial, Helvetica, sans-serif;">
+    <div style="margin: 80px 400px ; width: fit-content ;height: fit-content; background-color: rgb(56 196 101); border-radius: 25px; padding: 15px 25px 35px 25px; border:2px solid #000000 ;">
+        <h2>plateforme de communication enpo gs (nodejs wga3)</h2>
+        <input type="text" id="usernameInput" placeholder="Enter your username" style="padding: 10px;">
+        <button onclick="changeUsername()" style="background-color: rgb(252, 2, 52); color: white; margin-top: 10px; padding: 10px; border-radius: 10px;">Change Username</button><br><br>
+        <textarea id="messageInput" placeholder="Type your message" rows="4"></textarea>
+        <button onclick="sendMessage()" style="background-color: rgb(252, 2, 52); color: white; margin-top: 10px;padding: 10px 35px;border-radius: 10px">Send</button>
+        <br>
+
+        <div id="chatMessages"></div>
+
+        <!-- Insérer un champ pour saisir la clé de déchiffrement -->
+        <br><br><input type="text" id="encryptionKeyInput" placeholder="Enter decryption key">
+        <button onclick="setDecryptionKey()" style="background-color: rgb(20, 67, 254);color: #fff;">Set Key</button>
+    </div>
+    
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+
+        let decryptionKey = null;
+
+        function encryptMessage(message) {
+            if (!decryptionKey) return message; // Ne pas chiffrer si la clé de déchiffrement n'est pas définie
+            return CryptoJS.AES.encrypt(message, decryptionKey).toString();
+        }
+
+        function decryptMessage(ciphertext) {
+            if (!decryptionKey) return ciphertext; // Ne pas déchiffrer si la clé de déchiffrement n'est pas définie
+            const bytes = CryptoJS.AES.decrypt(ciphertext, decryptionKey);
+            return bytes.toString(CryptoJS.enc.Utf8);
+        }
+
+        function setDecryptionKey() {
+            decryptionKey = document.getElementById('encryptionKeyInput').value;
+        }
+
+        function changeUsername() {
+            const newUsername = document.getElementById('usernameInput').value;
+            socket.emit('changeUsername', newUsername);
+        }
+
+        function sendMessage() {
+            const message = document.getElementById('messageInput').value;
+            const encryptedMessage = encryptMessage(message);
+            socket.emit('chatMessage', encryptedMessage);
+            document.getElementById('messageInput').value = ''; // Effacer le champ de saisie après l'envoi du message
+        }
+
+        socket.on('chatMessage', (data) => {
+            const { username, message } = data;
+            const chatMessages = document.getElementById('chatMessages');
+            const messageElement = document.createElement('p');
+            const decryptedMessage = decryptMessage(message); // Déchiffrer le message reçu
+            messageElement.textContent = `${username}: ${decryptedMessage}`;
+            chatMessages.appendChild(messageElement);
+        });
+    </script>
+</body>
+</html>
